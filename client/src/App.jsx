@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { listSightings, createSighting, deleteSighting } from './api'
+import { listPlaces, createPlace, deletePlace } from './api'
 import DemoNotice from './components/DemoNotice.jsx'
 
 // A deliberately small working app. Replace all of it with your own project.
@@ -8,26 +8,24 @@ import DemoNotice from './components/DemoNotice.jsx'
 // message that admits a free-tier server can be slow to wake, and errors that
 // say something rather than rendering an empty list.
 
-const EMPTY_FORM = { place: '', description: '', spookiness: 3 }
+const EMPTY_FORM = { name: '', type: 'restaurant', area: '', status: 'want_to_try', rating: 4, notes: '' }
 
 export default function App() {
   const [status, setStatus] = useState('loading')   // loading | ready | error
-  const [rows, setRows] = useState([])
+  const [places, setPlaces] = useState([])
   const [error, setError] = useState(null)
   const [slow, setSlow] = useState(false)
+  const [view, setView] = useState('home')          // home | visited | add
+  const [filter, setFilter] = useState('all')        // all | want_to_try | visited
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
 
   async function load() {
     setStatus('loading')
     setError(null)
-
-    // A free-tier API sleeps. If this is taking a while, say so rather than
-    // spinning silently, which looks broken. See page 6.
     const timer = setTimeout(() => setSlow(true), 3000)
-
     try {
-      setRows(await listSightings())
+      setPlaces(await listPlaces())
       setStatus('ready')
     } catch (caught) {
       setError(caught)
@@ -44,17 +42,22 @@ export default function App() {
 
   async function handleSubmit(event) {
     event.preventDefault()
-    if (!form.place.trim()) return
+    if (!form.name.trim()) return
 
     setSaving(true)
     try {
-      const created = await createSighting({
-        place: form.place.trim(),
-        description: form.description.trim(),
-        spookiness: Number(form.spookiness),
+      const created = await createPlace({
+        name: form.name.trim(),
+        type: form.type,
+        area: form.area.trim(),
+        status: form.status,
+        rating: form.status === 'visited' ? Number(form.rating) : null,
+        notes: form.notes.trim(),
+        photos: [],
       })
-      setRows([created, ...rows])
+      setPlaces([created, ...places])
       setForm(EMPTY_FORM)
+      setView('home')
     } catch (caught) {
       setError(caught)
     } finally {
@@ -63,27 +66,37 @@ export default function App() {
   }
 
   async function handleDelete(id) {
-    const previous = rows
-    setRows(rows.filter((row) => row.id !== id))   // optimistic
+    const previous = places
+    setPlaces(places.filter((p) => p.id !== id))
     try {
-      await deleteSighting(id)
+      await deletePlace(id)
     } catch (caught) {
-      setRows(previous)                            // put it back on failure
+      setPlaces(previous)
       setError(caught)
     }
   }
 
+  const visiblePlaces =
+    view === 'visited'
+      ? places.filter((p) => p.status === 'visited')
+      : filter === 'all'
+      ? places
+      : places.filter((p) => p.status === filter)
+
   return (
     <div className="page">
       <header>
-        <h1>HAUnted Sightings</h1>
-        <p className="lede">
-          Replace this with your own project. This one is here so the template
-          has something that works.
-        </p>
+        <h1>Yumzys</h1>
+        <p className="lede">Restaurant &amp; café bucket list.</p>
       </header>
 
       <DemoNotice />
+
+      <nav className="row-head" style={{ gap: '0.5rem', marginBottom: '1rem' }}>
+        <button onClick={() => setView('home')} disabled={view === 'home'}>Home</button>
+        <button onClick={() => setView('visited')} disabled={view === 'visited'}>Visited</button>
+        <button onClick={() => setView('add')} disabled={view === 'add'}>Add Place</button>
+      </nav>
 
       {error && (
         <p className="error" role="alert">
@@ -91,78 +104,122 @@ export default function App() {
         </p>
       )}
 
-      <form onSubmit={handleSubmit} className="card">
-        <h2>Report a sighting</h2>
+      {view === 'add' && (
+        <form onSubmit={handleSubmit} className="card">
+          <h2>Add a place</h2>
 
-        <label htmlFor="place">Place</label>
-        <input
-          id="place"
-          value={form.place}
-          onChange={(event) => setForm({ ...form, place: event.target.value })}
-          maxLength={120}
-          required
-        />
+          <label htmlFor="name">Name</label>
+          <input
+            id="name"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            maxLength={120}
+            required
+          />
 
-        <label htmlFor="description">What happened</label>
-        <textarea
-          id="description"
-          value={form.description}
-          onChange={(event) => setForm({ ...form, description: event.target.value })}
-          maxLength={2000}
-          rows={3}
-        />
+          <label htmlFor="type">Type</label>
+          <select
+            id="type"
+            value={form.type}
+            onChange={(e) => setForm({ ...form, type: e.target.value })}
+          >
+            <option value="restaurant">Restaurant</option>
+            <option value="cafe">Cafe</option>
+          </select>
 
-        <label htmlFor="spookiness">Spookiness, 1 to 5</label>
-        <input
-          id="spookiness"
-          type="number"
-          min="1"
-          max="5"
-          value={form.spookiness}
-          onChange={(event) => setForm({ ...form, spookiness: event.target.value })}
-          required
-        />
+          <label htmlFor="area">Area</label>
+          <input
+            id="area"
+            value={form.area}
+            onChange={(e) => setForm({ ...form, area: e.target.value })}
+            maxLength={120}
+          />
 
-        <button type="submit" disabled={saving}>
-          {saving ? 'Saving...' : 'Add sighting'}
-        </button>
-      </form>
+          <label htmlFor="place-status">Status</label>
+          <select
+            id="place-status"
+            value={form.status}
+            onChange={(e) => setForm({ ...form, status: e.target.value })}
+          >
+            <option value="want_to_try">Want to try</option>
+            <option value="visited">Visited</option>
+          </select>
 
-      {/* Four states. Empty and error are different things and must not look
-          the same: an empty list means "nothing here yet", an error means
-          "we could not find out". */}
-      {status === 'loading' && (
-        <p className="muted">
-          Loading{slow ? '. The server may be waking up, which can take up to a minute.' : '...'}
-        </p>
+          {form.status === 'visited' && (
+            <>
+              <label htmlFor="rating">Rating, 1 to 5</label>
+              <input
+                id="rating"
+                type="number"
+                min="1"
+                max="5"
+                value={form.rating}
+                onChange={(e) => setForm({ ...form, rating: e.target.value })}
+              />
+            </>
+          )}
+
+          <label htmlFor="notes">Notes</label>
+          <textarea
+            id="notes"
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            maxLength={2000}
+            rows={3}
+          />
+
+          <button type="submit" disabled={saving}>
+            {saving ? 'Saving...' : 'Save place'}
+          </button>
+        </form>
       )}
 
-      {status === 'ready' && rows.length === 0 && (
-        <p className="muted">No sightings reported yet. Add the first one above.</p>
-      )}
+      {view !== 'add' && (
+        <>
+          {view === 'home' && (
+            <div className="row-head" style={{ gap: '0.5rem', marginBottom: '1rem' }}>
+              <button onClick={() => setFilter('all')} disabled={filter === 'all'}>All</button>
+              <button onClick={() => setFilter('want_to_try')} disabled={filter === 'want_to_try'}>Want to Try</button>
+              <button onClick={() => setFilter('visited')} disabled={filter === 'visited'}>Visited</button>
+            </div>
+          )}
 
-      {status === 'ready' && rows.length > 0 && (
-        <ul className="list">
-          {rows.map((row) => (
-            <li key={row.id} className="card">
-              <div className="row-head">
-                <h3>{row.place}</h3>
-                <span className="spooky" aria-label={`Spookiness ${row.spookiness} of 5`}>
-                  {'*'.repeat(row.spookiness)}
-                </span>
-              </div>
-              {row.description
-                ? <p>{row.description}</p>
-                : <p className="muted">No description given.</p>}
-              <footer>
-                <time dateTime={row.reported_at}>
-                  {new Date(row.reported_at).toLocaleString()}
-                </time>
-                <button onClick={() => handleDelete(row.id)}>Delete</button>
-              </footer>
-            </li>
-          ))}
-        </ul>
+          {status === 'loading' && (
+            <p className="muted">
+              Loading{slow ? '. The server may be waking up, which can take up to a minute.' : '...'}
+            </p>
+          )}
+
+          {status === 'ready' && visiblePlaces.length === 0 && (
+            <p className="muted">No places here yet.</p>
+          )}
+
+          {status === 'ready' && visiblePlaces.length > 0 && (
+            <ul className="list">
+              {visiblePlaces.map((place) => (
+                <li key={place.id} className="card">
+                  <div className="row-head">
+                    <h3>{place.name}</h3>
+                    {place.status === 'visited' ? (
+                      <span aria-label={`Rating ${place.rating} of 5`}>
+                        {'★'.repeat(place.rating)}{'☆'.repeat(5 - place.rating)}
+                      </span>
+                    ) : (
+                      <span className="muted">Want to try</span>
+                    )}
+                  </div>
+                  <p className="muted">{place.type} · {place.area}</p>
+                  {place.notes
+                    ? <p>{place.notes}</p>
+                    : <p className="muted">No notes yet.</p>}
+                  <footer>
+                    <button onClick={() => handleDelete(place.id)}>Delete</button>
+                  </footer>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </div>
   )
