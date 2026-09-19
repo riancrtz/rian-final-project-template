@@ -1,4 +1,4 @@
-# Your Project Name
+# Yumzys
 
 > **Replace this whole file.** It is a worked example of the README your project
 > will be graded from, not a file to leave as it is. Start with
