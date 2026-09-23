@@ -1,22 +1,56 @@
 import { useEffect, useState } from 'react'
-import { listPlaces, createPlace, deletePlace } from './api'
+import { listPlaces, createPlace, deletePlace, NEEDS_LOGIN, setCredentials } from './api'
 import DemoNotice from './components/DemoNotice.jsx'
-
-// A deliberately small working app. Replace all of it with your own project.
-//
-// What is worth keeping is the SHAPE: four states rather than two, a loading
-// message that admits a free-tier server can be slow to wake, and errors that
-// say something rather than rendering an empty list.
 
 const EMPTY_FORM = { name: '', type: 'restaurant', area: '', status: 'want_to_try', rating: 4, notes: '' }
 
+function LoginScreen({ onLogin }) {
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+
+  function handleSubmit(event) {
+    event.preventDefault()
+    setCredentials(username, password)
+    onLogin()
+  }
+
+  return (
+    <div className="page">
+      <header>
+        <h1>Yumzys</h1>
+        <p className="lede">Restaurant &amp; café bucket list.</p>
+      </header>
+      <form onSubmit={handleSubmit} className="card">
+        <h2>Log in</h2>
+        <label htmlFor="username">Username</label>
+        <input
+          id="username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+        />
+        <label htmlFor="password">Password</label>
+        <input
+          id="password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        <button type="submit">Log in</button>
+      </form>
+    </div>
+  )
+}
+
 export default function App() {
-  const [status, setStatus] = useState('loading')   // loading | ready | error
+  const [authed, setAuthed] = useState(!NEEDS_LOGIN)
+  const [status, setStatus] = useState('loading')
   const [places, setPlaces] = useState([])
   const [error, setError] = useState(null)
   const [slow, setSlow] = useState(false)
-  const [view, setView] = useState('home')          // home | visited | add
-  const [filter, setFilter] = useState('all')        // all | want_to_try | visited
+  const [view, setView] = useState('home')
+  const [filter, setFilter] = useState('all')
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
 
@@ -28,8 +62,12 @@ export default function App() {
       setPlaces(await listPlaces())
       setStatus('ready')
     } catch (caught) {
-      setError(caught)
-      setStatus('error')
+      if (caught.isAuthError) {
+        setAuthed(false)
+      } else {
+        setError(caught)
+        setStatus('error')
+      }
     } finally {
       clearTimeout(timer)
       setSlow(false)
@@ -37,8 +75,8 @@ export default function App() {
   }
 
   useEffect(() => {
-    load()
-  }, [])
+    if (authed) load()
+  }, [authed])
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -59,7 +97,11 @@ export default function App() {
       setForm(EMPTY_FORM)
       setView('home')
     } catch (caught) {
-      setError(caught)
+      if (caught.isAuthError) {
+        setAuthed(false)
+      } else {
+        setError(caught)
+      }
     } finally {
       setSaving(false)
     }
@@ -72,8 +114,16 @@ export default function App() {
       await deletePlace(id)
     } catch (caught) {
       setPlaces(previous)
-      setError(caught)
+      if (caught.isAuthError) {
+        setAuthed(false)
+      } else {
+        setError(caught)
+      }
     }
+  }
+
+  if (!authed) {
+    return <LoginScreen onLogin={() => setAuthed(true)} />
   }
 
   const visiblePlaces =
