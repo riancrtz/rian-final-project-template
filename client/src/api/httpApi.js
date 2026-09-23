@@ -1,21 +1,9 @@
-// The real client. Every function here talks to YOUR Express API.
-//
-// This is the file that matters for your finals project. mockApi.js exists so
-// you can build the interface before this has anywhere to point.
-
 const BASE = import.meta.env.VITE_API_BASE_URL || ''
-
-// For local development only. In Week 3, this needs a better solution (the
-// browser will show its own login prompt) rather than baking credentials into
-// the built client, which anyone can read. See journal notes on this.
-const AUTH = 'Basic ' + btoa(`${import.meta.env.VITE_ADMIN_USER}:${import.meta.env.VITE_ADMIN_PASS}`)
 
 async function request(path, options) {
   const response = await fetch(`${BASE}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: AUTH,
-    },
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
     ...options,
   })
 
