@@ -6,15 +6,18 @@
 -- rather than by connecting to a server. It is also what lets you move to a
 -- hosted database in one command.
 
-CREATE TABLE IF NOT EXISTS sightings (
-  id          SERIAL PRIMARY KEY,
-  place       TEXT        NOT NULL,
-  description TEXT        NOT NULL DEFAULT '',
-  spookiness  INTEGER     NOT NULL CHECK (spookiness BETWEEN 1 AND 5),
-  reported_at TIMESTAMPTZ NOT NULL DEFAULT now()
+CREATE TABLE IF NOT EXISTS places (
+  id         SERIAL PRIMARY KEY,
+  name       TEXT        NOT NULL,
+  type       TEXT        NOT NULL CHECK (type IN ('restaurant', 'cafe')),
+  area       TEXT        NOT NULL DEFAULT '',
+  status     TEXT        NOT NULL DEFAULT 'want_to_try' CHECK (status IN ('want_to_try', 'visited')),
+  rating     INTEGER     CHECK (rating BETWEEN 1 AND 5),
+  notes      TEXT        NOT NULL DEFAULT '',
+  photos     TEXT[]      NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- The list page always sorts newest first. Without this the database reads
--- every row and sorts it on each request.
-CREATE INDEX IF NOT EXISTS sightings_reported_at_idx
-  ON sightings (reported_at DESC);
+-- The home screen filters by status often, so index it.
+CREATE INDEX IF NOT EXISTS places_status_idx
+  ON places (status);

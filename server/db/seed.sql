@@ -4,24 +4,14 @@
 -- against the database your live demo depends on. Check which DATABASE_URL is
 -- loaded before you run it.
 
-TRUNCATE TABLE sightings RESTART IDENTITY CASCADE;
+TRUNCATE TABLE places RESTART IDENTITY CASCADE;
 
-INSERT INTO sightings (place, description, spookiness, reported_at) VALUES
-  ('Library, third floor',
-   'Chairs rearranged overnight, every time. The night guard says he locks the room himself.',
-   3, now() - interval '12 days'),
-  ('Old gym',
-   'Lights flicker in a fixed pattern after 9pm, always three short and one long.',
-   4, now() - interval '10 days'),
-  ('Parking basement',
-   'Footsteps with no one there. Reported separately by three different people in one week, which is what makes this one hard to dismiss. Two of them were alone at the time and did not know about the others. This row is deliberately long, because a seed of four words hides every text-wrapping bug you have.',
-   5, now() - interval '8 days'),
-  ('Canteen',
-   'A cold spot near the back door, every morning before seven.',
-   1, now() - interval '7 days'),
-  ('AB Building stairwell',
-   '',
-   2, now() - interval '5 days'),
-  ('Chapel garden',
-   'Someone humming. Stops the moment you turn around.',
-   3, now() - interval '2 days');
+INSERT INTO places (name, type, area, status, rating, notes, photos) VALUES
+  ('LALA Garden', 'cafe', 'Angeles City', 'visited', 4,
+   'Great Mango Shake, go before 5pm.', '{}'),
+  ('Grill Seoul', 'restaurant', 'Clark', 'want_to_try', NULL,
+   '', '{}'),
+  ('John''s Kitchen', 'restaurant', 'Angeles City', 'visited', 5,
+   'They have the best steaks.', '{}'),
+  ('Cafe Dia', 'cafe', 'Clark', 'want_to_try', NULL,
+   '', '{}');

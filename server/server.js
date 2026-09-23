@@ -1,7 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import { pool } from './db/pool.js'
-import * as sightings from './sightingsRepo.js'
+import * as places from './placesRepo.js'
 
 const app = express()
 
@@ -24,8 +24,7 @@ app.get('/healthz', (request, response) => {
   response.json({ ok: true })
 })
 
-// Is the database reachable? A different question, and the one that tells you
-// in two seconds which half of a problem you have.
+// Is the database reachable?
 app.get('/readyz', async (request, response) => {
   try {
     await pool.query('SELECT 1')
@@ -36,36 +35,58 @@ app.get('/readyz', async (request, response) => {
   }
 })
 
-// Validation lives on the server because the client can be bypassed. The
-// browser form is for a fast, friendly message; this is for correctness.
-function validate(body) {
-  const errors = []
-  const place = typeof body.place === 'string' ? body.place.trim() : ''
-  const description =
-    typeof body.description === 'string' ? body.description.trim() : ''
-  const spookiness = Number(body.spookiness)
-
-  if (!place) errors.push('place is required')
-  if (place.length > 120) errors.push('place must be 120 characters or fewer')
-  if (description.length > 2000) errors.push('description must be 2000 characters or fewer')
-  if (!Number.isInteger(spookiness) || spookiness < 1 || spookiness > 5) {
-    errors.push('spookiness must be a whole number from 1 to 5')
+// HTTP Basic Auth, protects every route below this line. healthz/readyz above
+// stay open so hosting dashboards can check the app is alive without a login.
+function basicAuth(request, response, next) {
+  const auth = request.headers.authorization
+  if (!auth || !auth.startsWith('Basic ')) {
+    response.set('WWW-Authenticate', 'Basic')
+    return response.status(401).send('Authentication required')
   }
-
-  return { errors, value: { place, description, spookiness } }
+  const [user, pass] = Buffer.from(auth.slice(6), 'base64').toString().split(':')
+  if (user === process.env.ADMIN_USER && pass === process.env.ADMIN_PASS) {
+    return next()
+  }
+  response.set('WWW-Authenticate', 'Basic')
+  return response.status(401).send('Invalid credentials')
 }
 
-app.get('/api/sightings', async (request, response, next) => {
+app.use(basicAuth)
+
+// Validation lives on the server because the client can be bypassed.
+function validate(body) {
+  const errors = []
+  const name = typeof body.name === 'string' ? body.name.trim() : ''
+  const type = typeof body.type === 'string' ? body.type.trim() : ''
+  const area = typeof body.area === 'string' ? body.area.trim() : ''
+  const status = typeof body.status === 'string' ? body.status.trim() : 'want_to_try'
+  const notes = typeof body.notes === 'string' ? body.notes.trim() : ''
+  const photos = Array.isArray(body.photos) ? body.photos : []
+  const rating = body.rating === null || body.rating === undefined ? null : Number(body.rating)
+
+  if (!name) errors.push('name is required')
+  if (name.length > 120) errors.push('name must be 120 characters or fewer')
+  if (!['restaurant', 'cafe'].includes(type)) errors.push('type must be restaurant or cafe')
+  if (!['want_to_try', 'visited'].includes(status)) errors.push('status must be want_to_try or visited')
+  if (notes.length > 2000) errors.push('notes must be 2000 characters or fewer')
+  if (rating !== null && (!Number.isInteger(rating) || rating < 1 || rating > 5)) {
+    errors.push('rating must be a whole number from 1 to 5')
+  }
+
+  return { errors, value: { name, type, area, status, rating, notes, photos } }
+}
+
+app.get('/api/places', async (request, response, next) => {
   try {
-    response.json(await sightings.getAll(pool))
+    response.json(await places.getAll(pool))
   } catch (error) {
     next(error)
   }
 })
 
-app.get('/api/sightings/:id', async (request, response, next) => {
+app.get('/api/places/:id', async (request, response, next) => {
   try {
-    const row = await sightings.getById(pool, request.params.id)
+    const row = await places.getById(pool, request.params.id)
     if (!row) return response.status(404).json({ error: 'Not found' })
     response.json(row)
   } catch (error) {
@@ -73,23 +94,23 @@ app.get('/api/sightings/:id', async (request, response, next) => {
   }
 })
 
-app.post('/api/sightings', async (request, response, next) => {
+app.post('/api/places', async (request, response, next) => {
   const { errors, value } = validate(request.body ?? {})
   if (errors.length > 0) return response.status(400).json({ error: errors.join('; ') })
 
   try {
-    response.status(201).json(await sightings.create(pool, value))
+    response.status(201).json(await places.create(pool, value))
   } catch (error) {
     next(error)
   }
 })
 
-app.put('/api/sightings/:id', async (request, response, next) => {
+app.put('/api/places/:id', async (request, response, next) => {
   const { errors, value } = validate(request.body ?? {})
   if (errors.length > 0) return response.status(400).json({ error: errors.join('; ') })
 
   try {
-    const row = await sightings.update(pool, request.params.id, value)
+    const row = await places.update(pool, request.params.id, value)
     if (!row) return response.status(404).json({ error: 'Not found' })
     response.json(row)
   } catch (error) {
@@ -97,9 +118,9 @@ app.put('/api/sightings/:id', async (request, response, next) => {
   }
 })
 
-app.delete('/api/sightings/:id', async (request, response, next) => {
+app.delete('/api/places/:id', async (request, response, next) => {
   try {
-    const removed = await sightings.remove(pool, request.params.id)
+    const removed = await places.remove(pool, request.params.id)
     if (!removed) return response.status(404).json({ error: 'Not found' })
     response.status(204).end()
   } catch (error) {
@@ -111,15 +132,11 @@ app.use((request, response) => {
   response.status(404).json({ error: 'No such route' })
 })
 
-// The detail goes in your logs; the visitor gets a plain message. Sending a
-// stack trace to a stranger tells them about your file layout and dependencies.
 app.use((error, request, response, next) => {
   console.error(error)
   response.status(500).json({ error: 'Something went wrong on the server' })
 })
 
-// The host chooses the port and tells you through PORT. Hardcoding 3000 is the
-// commonest reason a first deploy is marked unhealthy and killed.
 const port = process.env.PORT || 3000
 
 app.listen(port, () => {
