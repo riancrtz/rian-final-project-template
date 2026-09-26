@@ -51,6 +51,7 @@ export default function App() {
   const [slow, setSlow] = useState(false)
   const [view, setView] = useState('home')
   const [filter, setFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('all')
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
 
@@ -126,12 +127,16 @@ export default function App() {
     return <LoginScreen onLogin={() => setAuthed(true)} />
   }
 
-  const visiblePlaces =
-    view === 'visited'
-      ? places.filter((p) => p.status === 'visited')
-      : filter === 'all'
-      ? places
-      : places.filter((p) => p.status === filter)
+const visiblePlaces =
+  view === 'visited'
+    ? places.filter((p) =>
+        p.status === 'visited' &&
+        (typeFilter === 'all' || p.type === typeFilter)
+      )
+    : places.filter((p) =>
+        (filter === 'all' || p.status === filter) &&
+        (typeFilter === 'all' || p.type === typeFilter)
+      )
 
   return (
     <div className="page">
@@ -227,11 +232,19 @@ export default function App() {
       {view !== 'add' && (
         <>
           {view === 'home' && (
-            <div className="row-head" style={{ gap: '0.5rem', marginBottom: '1rem' }}>
-              <button onClick={() => setFilter('all')} disabled={filter === 'all'}>All</button>
-              <button onClick={() => setFilter('want_to_try')} disabled={filter === 'want_to_try'}>Want to Try</button>
-              <button onClick={() => setFilter('visited')} disabled={filter === 'visited'}>Visited</button>
-            </div>
+            <>
+              <div className="row-head" style={{ gap: '0.5rem', marginBottom: '1rem' }}>
+                <button onClick={() => setFilter('all')} disabled={filter === 'all'}>All statuses</button>
+                <button onClick={() => setFilter('want_to_try')} disabled={filter === 'want_to_try'}>Want to Try</button>
+                <button onClick={() => setFilter('visited')} disabled={filter === 'visited'}>Visited</button>
+              </div>
+
+              <div className="row-head" style={{ gap: '0.5rem', marginBottom: '1rem' }}>
+                <button onClick={() => setTypeFilter('all')} disabled={typeFilter === 'all'}>All types</button>
+                <button onClick={() => setTypeFilter('restaurant')} disabled={typeFilter === 'restaurant'}>Restaurant</button>
+                <button onClick={() => setTypeFilter('cafe')} disabled={typeFilter === 'cafe'}>Cafe</button>
+              </div>
+            </>
           )}
 
           {status === 'loading' && (
@@ -274,3 +287,4 @@ export default function App() {
     </div>
   )
 }
+
