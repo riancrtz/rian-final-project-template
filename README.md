@@ -1,113 +1,188 @@
 # Yumzys
 
-A restaurant and café bucket list app: track places you want to try around
-Angeles/Pampanga, mark them as visited, and rate them. Built for one person
-
-planning food trips.
-
-Live site: https://riancrtz.github.io/rian-final-project-template/
-API: (not deployed yet)
+Live site: https://riancrtz.github.io/yumzys-final-project-template/
+API: https://yumzys-api.onrender.com
 Demo video: (link, added in Week 3)
 
-> This deployment is running in demo mode. The interface is real; the backend
-> is simulated in your browser so the site works without a server. See Demo
-> mode below. Delete this quote once your API is live.
+This project was built with AI assistance. See [AI-USAGE.md](./AI-USAGE.md)
+for the full record.
 
-<img width="1535" height="814" alt="yumzys-live-ss" src="https://github.com/user-attachments/assets/264db2bc-13eb-481d-bde9-694cb88593e6" />
-<img width="1535" height="814" alt="yumzys-live-ss-1" src="https://github.com/user-attachments/assets/695b076a-b86e-459b-b2f6-59bb8bf5968e" />
+<img width="1535" height="814" alt="yumzys week 2 - 1" src="https://github.com/user-attachments/assets/d41dc3cd-c5ef-4ad3-a17a-07624b7cf919" />
+<img width="1910" height="1746" alt="yumzys week 2 - 2" src="https://github.com/user-attachments/assets/5d832973-8b70-4549-ab7d-c363bfbe9e38" />
+<img width="1910" height="1125" alt="yumzys week 2 - 3" src="https://github.com/user-attachments/assets/912466f0-c563-4f28-add7-ebdb2124be25" />
+<img width="1910" height="1041" alt="yumzys week 2 - 4" src="https://github.com/user-attachments/assets/2450f6dd-93d9-4931-a1ea-e6e8c36d7961" />
+<img width="1910" height="945" alt="yumzys week 2 - 5" src="https://github.com/user-attachments/assets/bfcd80b9-4f63-446d-8895-fa6cd60e00cb" />
 
-## What it does
+## 1. Overview
 
-- Add a place (restaurant or café) with a name, area, and status
-- Mark a place as "want to try" or "visited"
-- Rate a place once it's marked visited
-- Browse all places, filtered by status
-- Delete a place
+Yumzys is a restaurant and café bucket list app. It lets one person keep track
+of places they want to try around Angeles/Pampanga, mark them as visited once
+they've been, and rate them afterward. It solves the everyday problem of
+deciding where to eat by keeping a running personal list instead of relying
+on memory or scattered chat messages.
 
-## Built with
+## 2. Setup and installation
 
-React and Vite on the front end. Express and PostgreSQL on the back end
-(not built yet). The client is on GitHub Pages; the API and database are
-not deployed yet.
+**What to install first:**
+- Node.js (tested on v24.18.0) and npm (tested on v11.16.0)
+- Git
+- No local PostgreSQL install is required, this project uses a free hosted
+  Neon database instead
 
-## Demo mode
+**Get the code:**
 
-This repository can run two ways, chosen by one environment variable at
-build time.
+    git clone https://github.com/riancrtz/yumzys-final-project-template.git
+    cd yumzys-final-project-template
 
-| `VITE_USE_MOCK_API` | What happens |
-|---|---|
-| unset, or anything but `false` | The client answers its own requests from `localStorage`. No server, no database, nothing shared between visitors. This is what the site currently runs on. |
-| `false` | The client calls the Express API at `VITE_API_BASE_URL`, which reads and writes real PostgreSQL. Not available yet. |
+**Install dependencies** (client and server are separate):
 
-Demo mode is a starting point, not a finished project. My finals submission
-will be all three pieces (client, API, database) deployed and talking to
-each other.
+    cd client
+    npm install
+    cd ../server
+    npm install
 
-## Running it yourself
+**Environment and configuration.** Copy `.env.example` to `.env` in both
+`client/` and `server/`, then fill in real values. Never commit the real
+`.env` files, they are already git-ignored.
 
-The client only, in demo mode. No database needed.
+Client (`client/.env`):
 
-cd client
-npm install
-cp .env.example .env # VITE_USE_MOCK_API stays unset
-npm run dev # http://localhost:5173
-
-
-The whole stack (API and database) is not built yet. This section will be
-updated once `server/` is working.
-
-## Environment variables
-
-None of these are committed. `.env.example` in `client/` lists them with
-placeholder values.
-
-| Name | Where | What it is |
+| Variable | Example value | What it is |
 |---|---|---|
-| `VITE_USE_MOCK_API` | client, at build time | only `false` turns demo mode off; unset means on |
-| `VITE_API_BASE_URL` | client, at build time | the API's public URL, no trailing slash (not used yet) |
+| `VITE_USE_MOCK_API` | `false` | `false` uses the real API; unset or `true` uses simulated demo data |
+| `VITE_API_BASE_URL` | `http://localhost:3000` | where the Express API is running |
+
+Server (`server/.env`):
+
+| Variable | Example value | What it is |
+|---|---|---|
+| `DATABASE_URL` | `postgresql://user:pass@ep-example.neon.tech/dbname?sslmode=require` | PostgreSQL connection string (get your own from Neon) |
+| `CORS_ORIGINS` | `http://localhost:5173` | comma-separated origins allowed to call the API |
+| `NODE_ENV` | `development` | `production` on a deployed host |
+| `ADMIN_USER` | `admin` | username for the app's login gate |
+| `ADMIN_PASS` | `choose-a-real-password` | password for the app's login gate |
+
+**Set up and seed the database.** Once `DATABASE_URL` is filled in with your
+own Neon (or other PostgreSQL) connection string:
+
+    cd server
+    npm run db:reset
+
+This creates the `places` table and inserts four sample rows.
+
+## 3. How to run it
+
+    # Terminal 1, the API
+    cd server
+    npm run dev
+    # -> API listening on http://localhost:3000
+
+    # Terminal 2, the client
+    cd client
+    npm run dev
+    # -> open http://localhost:5173
+
+When it works, opening `http://localhost:5173` shows a login screen. Log in
+with the `ADMIN_USER` / `ADMIN_PASS` you set in `server/.env`, and you should
+see the Home screen with a list of places (LALA Garden, Grill Seoul, John's
+Kitchen, Cafe Dia, if you used the seed data as-is).
+
+To run the client alone with no backend, use demo mode instead: set
+`VITE_USE_MOCK_API` to anything other than `false` (or leave it unset), and
+skip the server entirely.
+
+## 4. Features and usage
+
+- **Log in** - required before anything else, since the app has no separate
+  guest mode
+- **Home** - view all saved places, filter by All / Want to Try / Visited
+- **Visited** - view only places marked as visited
+- **Add Place** - add a new restaurant or café, with a name, type
+  (restaurant/café), area, status (want to try/visited), and notes. If
+  status is set to visited, a rating field also appears
+- **Delete** - remove a place from the list
+
+**API endpoints:**
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/healthz` | is the server process alive |
+| GET | `/readyz` | is the database reachable |
+| GET | `/api/places` | list all places |
+| GET | `/api/places/:id` | get one place by id |
+| POST | `/api/places` | create a new place |
+| PUT | `/api/places/:id` | update a place |
+| DELETE | `/api/places/:id` | delete a place |
+
+All `/api/places` routes require login (HTTP Basic Auth), `/healthz` and
+`/readyz` do not.
+
+## 5. Project structure
+
+    client/
+      src/api/          one interface, two implementations, chosen by a variable
+        index.js         picks mock or real API based on env variable
+        mockApi.js        simulated backend, stores data in localStorage
+        httpApi.js         real API calls, holds login credentials in memory
+        seed.json          starter place data (demo mode only)
+      src/components/
+        DemoNotice.jsx    banner shown while running in demo mode
+      src/App.jsx          main app: login screen, Home, Visited, Add Place
+    server/
+      db/
+        pool.js            PostgreSQL connection pool
+        run.js              runs a .sql file against DATABASE_URL
+        schema.sql          the places table
+        seed.sql            sample places
+      placesRepo.js         parameterized queries: getAll, getById, create, update, remove
+      server.js             Express app: routes, validation, Basic Auth middleware
+    docs/                   planning documents and weekly reports
+
+## 6. Screenshots
+
+See the two screenshots at the top of this file, showing the Home screen with
+the place list, filters, and navigation.
+
+## 7. Known issues and next steps
+
+- No photo upload yet, the data model supports a `photos` field, but there's
+  no upload UI built
+- No Place Detail screen yet, places can only be added or deleted from the
+  list, there's no way to view or edit one place's full info
+- Styling still uses the template's default look, my own design system
+  (colors, type scale, spacing) hasn't been applied yet
+- The database user the app connects as (`neondb_owner`) has full owner
+  privileges rather than being scoped down to only what the app needs
+
+**What I would do next:**
+- Build the Place Detail screen with a photo gallery
+- Apply my design system's colors, type, and spacing to the actual interface
+- Create a scoped-down database role instead of using the default owner
+
+## Access control
+
+This app has no user accounts, it's built for one person. Every `/api/places`
+route is protected by a login (HTTP Basic Auth on the server, with an in-app
+login screen on the client, since the browser's native login popup doesn't
+work reliably once the client and API are on different origins, especially
+in private/incognito windows).
+
+Credentials for grading are in the private workspace `project/README.md`, not
+here, since this repository is public.
 
 ## Deploying
 
-Client, to GitHub Pages. Already wired up in
-`.github/workflows/deploy-pages.yml`.
+**Client, to GitHub Pages.** Already wired up in
+`.github/workflows/deploy-pages.yml`. Settings > Pages > Build and deployment
+> Source: GitHub Actions. `VITE_USE_MOCK_API` and `VITE_API_BASE_URL` are set
+under Settings > Secrets and variables > Actions > Variables, then the
+workflow is re-run to rebuild with them baked in.
 
-- Settings > Pages > Build and deployment > Source: **GitHub Actions**
-- Repository must be public for Pages to serve it on a free account
+**API, to Render.** Root directory `server`, build command `npm install`,
+start command `npm start`. Environment variables set in Render's dashboard.
 
-API and database are not deployed yet.
-
-## Project structure
-
-client/
-src/api/ one interface, two implementations, chosen by a variable
-index.js picks mock or real API based on env variable
-mockApi.js simulated backend, stores data in localStorage
-httpApi.js real API calls (not yet connected to a backend)
-seed.json starter place data
-src/components/
-DemoNotice.jsx banner shown while running in demo mode
-src/App.jsx main app: Home, Visited, and Add Place screens
-server/ Express API (not built yet)
-docs/ planning documents and weekly reports
-
-
-## Known issues and next steps
-
-- No photo upload yet, the Add Place form and data model support a
-  `photos` field, but there's no upload UI built
-- No Place Detail screen yet, places can only be added or deleted from
-  the list, there's no way to view or edit one place's full info
-- No real backend or database yet, everything runs on mock data in the
-  browser
-- Styling still uses the template's default look, my own design system
-  (colors, type scale, spacing) hasn't been applied yet
-
-## What I would do next
-
-- Build the Place Detail screen with a photo gallery
-- Wire up the Express API and PostgreSQL database
-- Apply my design system's colors, type, and spacing to the actual interface
+**Database, on Neon.** A free Neon project, schema and seed data applied once
+with `npm run db:reset` pointed at its connection string.
 
 ## Author
 
